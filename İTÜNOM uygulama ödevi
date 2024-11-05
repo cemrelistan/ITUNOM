@@ -1,0 +1,79 @@
+import threading
+import time
+import random
+import queue
+
+
+class Vehicle:
+    def __init__(self, name):
+        self.name = name
+        self.position = (0, 0)
+        self.velocity = 0
+        self.direction = 0
+        self.altitude = 0
+
+    def update_kinematics(self):
+
+        self.velocity = random.randint(0, 5)
+        self.direction = random.randint(90, 180)
+        self.altitude = random.randint(100, 200)
+        self.position = (random.uniform(-100, 100), random.uniform(-100, 100))
+
+        return {
+            'name': self.name,
+            'position': self.position,
+            'velocity': self.velocity,
+            'direction': self.direction,
+            'altitude': self.altitude
+        }
+
+
+class ControlCenter:
+    def __init__(self):
+        self.data_queue = queue.Queue()
+
+    def receive_data(self):
+        while True:
+            if not self.data_queue.empty():
+                data = self.data_queue.get()
+                print(f"{data['name']}: "
+                      f"Konum: {data['position']}, Hız: {data['velocity']} m/s, "
+                      f"Yön: {data['direction']}°, İrtifa: {data['altitude']} m")
+            time.sleep(1)
+
+    def add_data(self, data):
+        self.data_queue.put(data)
+
+
+def vehicle_thread(vehicle, control_center):
+    while True:
+        kinematic_data = vehicle.update_kinematics()
+        control_center.add_data(kinematic_data)
+        time.sleep(1)
+
+
+if __name__ == "__main__":
+
+    control_center = ControlCenter()
+    vehicles = [
+        Vehicle("araç1"),
+        Vehicle("araç2")
+    ]
+
+
+    control_center_thread = threading.Thread(target=control_center.receive_data)
+    control_center_thread.daemon = True
+    control_center_thread.start()
+
+
+    for vehicle in vehicles:
+        thread = threading.Thread(target=vehicle_thread, args=(vehicle, control_center))
+        thread.daemon = True
+        thread.start()
+
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("uygulama tamam ^^")
